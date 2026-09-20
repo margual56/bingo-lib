@@ -1,0 +1,45 @@
+name: Build and release wasm package
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Build wasm package
+        run: wasm-pack build --target web --out-dir pkg
+
+      - name: Publish "latest" release with the built artifacts
+        uses: ncipollo/release-action@v1
+        with:
+          tag: latest
+          name: Latest build
+          body: Automatically built from ${{ github.sha }}.
+          allowUpdates: true
+          removeArtifacts: true
+          makeLatest: true
+          artifacts: >-
+            pkg/generator_wasm.js,
+            pkg/generator_wasm_bg.wasm,
+            pkg/generator_wasm.d.ts,
+            pkg/generator_wasm_bg.wasm.d.ts
+          token: ${{ secrets.GITHUB_TOKEN }}
